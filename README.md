@@ -3,7 +3,7 @@
 # stegoLab
 
 <p align="center">
-  <strong>Minimalist Steganography & Forensics Suite</strong>
+  <strong>Steganography & Forensics</strong>
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@
 <a id="about-the-project"></a>
 ## About the Project
 
-**stegoLab** is an in-memory steganography laboratory and forensic analysis tool designed with a minimalist Apple-inspired user interface. It combines spatial-domain least significant bit manipulation with transform-domain singular value decomposition quantization index modulation (SVD QIM) and color-laser-printer-style tracking dots (Machine Identification Codes).
+**stegoLab** is an in-memory steganography laboratory and forensic analysis tool designed with a minimalist user interface. It combines spatial-domain least significant bit manipulation with transform-domain singular value decomposition quantization index modulation (SVD QIM) and color-laser-printer-style tracking dots (Machine Identification Codes).
 
 Everything runs locally in volatile memory (RAM)—uploaded cover files, secret payloads, and encryption keys are processed in real time and never stored on disk or sent over external networks.
 
@@ -53,7 +53,6 @@ Everything runs locally in volatile memory (RAM)—uploaded cover files, secret 
 - **Interactive Bit-Plane Inspector:** Decomposes images into 24 distinct bit planes and composite RGB layers. Navigate between bit planes seamlessly using the keyboard arrow keys ($\leftarrow$ / $\rightarrow$ or $\uparrow$ / $\downarrow$).
 - **Machine Identification Codes (MIC):** Implements an authentic 8-row binary printer tracking dot matrix encoding timestamps, dates, and custom identifier numbers with orientation corner brackets.
 - **Blind Steganalysis:** Multi-scale SVD lattice resonance detection $R(\Delta)$, calibrated Chi-Square ($\chi^2$) analysis, and structured header signature detection.
-- **Minimal Apple Dark UI:** 70% opacity interactive video background, fluid mouse wave ripples, and zero-scroll viewport geometry.
 
 ---
 
