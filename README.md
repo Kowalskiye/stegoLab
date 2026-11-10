@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Kowalskiye/stegoLab"><img src="https://img.shields.io/badge/stegoLab-v2.0-0071e3?style=for-the-badge&logo=apple&logoColor=white" alt="stegoLab"></a>
+  <a href="https://github.com/Kowalskiye/stegoLab"><img src="https://img.shields.io/badge/stegoLab-v2.0-0071e3?style=for-the-badge" alt="stegoLab"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.10%2B-2997ff?style=for-the-badge&logo=python&logoColor=white" alt="Python Version"></a>
   <a href="https://flask.palletsprojects.com/"><img src="https://img.shields.io/badge/Flask-3.0-white?style=for-the-badge&logo=flask&logoColor=black" alt="Flask"></a>
   <a href="https://vercel.com"><img src="https://img.shields.io/badge/Vercel-Ready-black?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel"></a>
