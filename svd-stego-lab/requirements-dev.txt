@@ -1,0 +1,7 @@
+-r requirements.txt
+pytest>=7.4
+opencv-python-headless>=4.8   # only for the compatibility test against the original LSBSteg
+docopt>=0.6.2                 # only for the compatibility test against the original LSBSteg
+bandit>=1.7
+pip-audit>=2.6
+ruff>=0.4

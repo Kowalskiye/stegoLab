@@ -1,0 +1,1963 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>stegoLab — Minimalist Steganography & Steganalysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --card: rgba(18, 18, 22, 0.68);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-hover: rgba(255, 255, 255, 0.18);
+      --fg: #f5f5f7;
+      --fg-muted: #86868b;
+      --blue: #0071e3;
+      --blue-hover: #0077ed;
+      --blue-glow: rgba(0, 113, 227, 0.3);
+      --cyan: #2997ff;
+      --accent: #30d158;
+      --danger: #ff453a;
+      --warning: #ffd60a;
+      --radius: 18px;
+      --radius-sm: 10px;
+      --radius-pill: 9999px;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+      --mono: "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+      background: #000;
+      color: var(--fg);
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body.home-active {
+      overflow-y: hidden;
+      height: 100vh;
+    }
+
+    /* -------------------------------------------------------------
+       1. 70% OPACITY BACKGROUND VIDEO (STACKED IN FRONT OF BODY BG)
+       ------------------------------------------------------------- */
+    .bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      opacity: 0.7;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .bg-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at 50% 30%, rgba(3, 7, 18, 0.45) 0%, rgba(3, 7, 18, 0.82) 100%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Wave / Ripple Canvas for subtle interactive mouse motion */
+    #waveCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.85;
+    }
+
+    /* Interactive UI Content Layer */
+    header, main, footer, .view-panel {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* -------------------------------------------------------------
+       2. MINIMAL APPLE-STYLE HEADER
+       ------------------------------------------------------------- */
+    header {
+      position: sticky;
+      top: 0;
+      height: 56px;
+      box-sizing: border-box;
+      background: rgba(3, 7, 18, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 0.6rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 2.5rem;
+    }
+
+    .brand-logo {
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+    .brand-logo:hover {
+      opacity: 0.85;
+      transform: translateY(-1px);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.75rem;
+    }
+
+    .nav-item {
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--fg-muted);
+      cursor: pointer;
+      text-decoration: none;
+      position: relative;
+      padding: 4px 0;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .nav-item:hover {
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+    .nav-item.active {
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .nav-item.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: #ffffff;
+      border-radius: 2px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .btn-about {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius-pill);
+      padding: 0.45rem 1.35rem;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+    }
+    .btn-about:hover {
+      background: #1e293b;
+      border-color: rgba(255, 255, 255, 0.35);
+      transform: translateY(-1.5px);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn-mobile-nav {
+      display: none;
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      font-size: 1.4rem;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 56px;
+      left: 0;
+      width: 100%;
+      background: rgba(3, 7, 18, 0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 1.5rem 2rem;
+      flex-direction: column;
+      gap: 1.25rem;
+      z-index: 99;
+    }
+    .mobile-menu.open { display: flex; }
+
+    /* -------------------------------------------------------------
+       3. HOMEPAGE HERO (MATCHING USER SCREENSHOT)
+       ------------------------------------------------------------- */
+    .hero-container {
+      height: calc(100vh - 56px);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      text-align: center;
+      padding: 1rem 1.5rem 1.5rem 1.5rem;
+      position: relative;
+    }
+
+    .hero-center-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: auto 0;
+    }
+
+    .neon-title {
+      font-size: clamp(3rem, 6.5vw, 4.8rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: #ffffff;
+      margin: 0 0 0.85rem 0;
+      user-select: none;
+      text-shadow:
+        0 0 7px rgba(255, 255, 255, 0.85),
+        0 0 16px rgba(255, 255, 255, 0.55),
+        0 0 28px rgba(41, 151, 255, 0.42),
+        0 0 52px rgba(41, 151, 255, 0.22);
+      transition: text-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .neon-title:hover {
+      text-shadow:
+        0 0 10px rgba(255, 255, 255, 0.95),
+        0 0 22px rgba(255, 255, 255, 0.75),
+        0 0 38px rgba(41, 151, 255, 0.65),
+        0 0 70px rgba(41, 151, 255, 0.38);
+    }
+
+    .hero-subtitle {
+      max-width: 500px;
+      font-size: 1.05rem;
+      line-height: 1.55;
+      color: var(--fg-muted);
+      margin: 0 auto 2rem auto;
+      font-weight: 400;
+    }
+
+    .hero-toggle-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .pill-btn {
+      padding: 0.7rem 1.85rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+    }
+    .pill-dark {
+      background: #111827;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .pill-dark:hover {
+      background: #1f293d;
+      border-color: rgba(255, 255, 255, 0.38);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .pill-light {
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid #e2e8f0;
+    }
+    .pill-light:hover {
+      background: #ffffff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-get-started {
+      background: var(--blue);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 2.25rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      box-shadow: 0 4px 16px var(--blue-glow);
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-get-started:hover {
+      background: var(--blue-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 113, 227, 0.55);
+    }
+
+    .home-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2.25rem;
+      margin-top: auto;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .home-footer a {
+      color: var(--fg-muted);
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .home-footer a:hover {
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    /* -------------------------------------------------------------
+       4. MINIMAL APPLE CARDS & CONTROLS (ENCRYPT, DECRYPT, ANALYZE)
+       ------------------------------------------------------------- */
+    main {
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem 1.5rem;
+    }
+
+    .view-panel { display: none; }
+    .view-panel.active {
+      display: block;
+      animation: appleFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes appleFade {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .apple-card {
+      background: rgba(18, 18, 22, 0.72);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      margin-bottom: 2rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .apple-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .apple-card-header {
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .apple-card-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: #ffffff;
+      margin: 0 0 0.35rem 0;
+    }
+    .apple-card-sub {
+      color: var(--fg-muted);
+      font-size: 0.92rem;
+      margin: 0;
+    }
+
+    /* Apple Segmented Picker Control */
+    .segmented-control {
+      display: flex;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 3px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 1.5rem;
+      gap: 3px;
+    }
+    .segmented-btn {
+      flex: 1;
+      padding: 8px 14px;
+      border: none;
+      background: transparent;
+      color: var(--fg-muted);
+      font-family: var(--font);
+      font-size: 0.88rem;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      text-align: center;
+    }
+    .segmented-btn:hover {
+      color: #ffffff;
+    }
+    .segmented-btn.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    /* Minimal Apple Dropzone */
+    .apple-dropzone {
+      border: 1.5px dashed rgba(255, 255, 255, 0.14);
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: var(--radius);
+      padding: 2.25rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      margin-bottom: 1.5rem;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .apple-dropzone:hover {
+      border-color: var(--cyan);
+      background: rgba(41, 151, 255, 0.04);
+      transform: translateY(-1.5px);
+    }
+    .apple-dropzone-icon {
+      font-size: 2.2rem;
+      margin-bottom: 0.4rem;
+      opacity: 0.9;
+    }
+    .apple-dropzone-text {
+      font-weight: 600;
+      color: #ffffff;
+      font-size: 0.98rem;
+      margin-bottom: 0.2rem;
+    }
+    .apple-dropzone-sub {
+      font-size: 0.82rem;
+      color: var(--fg-muted);
+    }
+    .apple-dropzone input[type="file"] {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    /* Minimal Clean Inputs */
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--fg-muted);
+      margin-bottom: 0.45rem;
+      letter-spacing: 0.02em;
+    }
+    .apple-input, .apple-textarea {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      font-family: var(--font);
+      font-size: 0.94rem;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .apple-input:focus, .apple-textarea:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(41, 151, 255, 0.18);
+      background: rgba(0, 0, 0, 0.6);
+    }
+    .apple-textarea { font-family: var(--mono); resize: vertical; min-height: 90px; }
+
+    /* Minimal Samples Row */
+    .samples-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+      color: var(--fg-muted);
+      margin-top: -0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .sample-tag {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--card-border);
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: all 0.18s ease;
+    }
+    .sample-tag:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    /* Collapsible Disclosure for Advanced Settings */
+    .disclosure-toggle {
+      background: transparent;
+      border: none;
+      color: var(--cyan);
+      font-family: var(--font);
+      font-size: 0.86rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0;
+      margin: 0.75rem 0 1.25rem 0;
+      transition: all 0.2s ease;
+    }
+    .disclosure-toggle:hover {
+      opacity: 0.85;
+      transform: translateX(2px);
+    }
+    .disclosure-content {
+      display: none;
+      background: rgba(10, 15, 28, 0.5);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .disclosure-content.open { display: block; }
+
+    /* Primary Action Buttons with Hover Animation */
+    .apple-btn-primary {
+      width: 100%;
+      background: var(--blue);
+      color: #ffffff;
+      border: none;
+      padding: 0.85rem 1.5rem;
+      font-weight: 600;
+      font-size: 1rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 16px var(--blue-glow);
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .apple-btn-primary:hover {
+      background: var(--blue-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.55);
+    }
+    .apple-btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Minimal MIC Matrix Preview (Clean & Elegant) */
+    .mic-container-box {
+      background: rgba(5, 9, 20, 0.7);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+      margin-top: 1rem;
+    }
+    .mic-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+    .mic-table th {
+      padding: 4px 6px;
+      color: var(--fg-muted);
+      border-bottom: 1px solid var(--card-border);
+      font-weight: 500;
+    }
+    .mic-table td {
+      padding: 5px 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      position: relative;
+    }
+    .mic-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      vertical-align: middle;
+      transition: all 0.15s ease;
+    }
+    .mic-dot.active {
+      background: #facc15;
+      box-shadow: 0 0 8px #facc15;
+    }
+    .mic-dot.inactive {
+      background: #1e293b;
+      border: 1px solid #334155;
+    }
+    .mic-dot.sep {
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+      width: 6px;
+      height: 6px;
+    }
+    .mic-sep-td, .mic-sep-th {
+      border-left: 2px solid #22c55e !important;
+      border-right: 2px solid #22c55e !important;
+      background: rgba(34, 197, 94, 0.05);
+      width: 16px;
+      padding: 0 !important;
+    }
+    .mic-corner-marker {
+      font-weight: 900;
+      font-size: 1.15rem;
+      color: #22c55e;
+      line-height: 1;
+      position: absolute;
+    }
+    .mic-corner-tl { top: 0px; left: 2px; }
+    .mic-corner-br { bottom: 0px; right: 2px; }
+
+    /* Results Card */
+    .apple-result-card {
+      background: rgba(18, 18, 22, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-top: 1.75rem;
+      display: none;
+      animation: appleFade 0.25s ease;
+    }
+    .verdict-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 4px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .verdict-clean {
+      background: rgba(48, 209, 88, 0.12);
+      color: #30d158;
+      border: 1px solid rgba(48, 209, 88, 0.28);
+    }
+    .verdict-found {
+      background: rgba(41, 151, 255, 0.14);
+      color: #2997ff;
+      border: 1px solid rgba(41, 151, 255, 0.3);
+    }
+    .verdict-warn {
+      background: rgba(255, 69, 58, 0.14);
+      color: #ff453a;
+      border: 1px solid rgba(255, 69, 58, 0.3);
+    }
+
+    /* Clean Canvas for Layers */
+    .stage-wrapper {
+      background: #000000;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius);
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      overflow: auto;
+      margin-top: 1.25rem;
+    }
+    #stageCanvas {
+      max-width: 100%;
+      height: auto;
+      image-rendering: pixelated;
+      border-radius: 6px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+    }
+
+    /* -------------------------------------------------------------
+       5. DEDICATED ABOUT PAGE (MINIMAL & BEAUTIFUL APPLE ESSAY)
+       ------------------------------------------------------------- */
+    .about-article {
+      max-width: 740px;
+      margin: 0 auto;
+      line-height: 1.75;
+      font-size: 1.05rem;
+      color: #e2e8f0;
+    }
+    .about-article h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+    .about-article h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      margin-top: 2.5rem;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 0.5rem;
+    }
+    .about-article p {
+      color: #cbd5e1;
+      margin-bottom: 1.25rem;
+    }
+    .about-card-box {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      backdrop-filter: blur(20px);
+    }
+    .about-card-box h3 {
+      margin: 0 0 0.5rem 0;
+      color: var(--cyan);
+      font-size: 1.15rem;
+    }
+
+    /* Helper Utilities */
+    .btn-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-secondary {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      padding: 0.65rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+    }
+    .btn-secondary:hover {
+      background: #2d3e58;
+      transform: translateY(-1.5px);
+    }
+    .spinner {
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media(max-width: 768px) {
+      header { padding: 0.85rem 1.25rem; }
+      .header-left { gap: 1rem; }
+      .nav-links { display: none; }
+      .btn-mobile-nav { display: block; }
+      .apple-card { padding: 1.35rem; }
+      .hero-toggle-group { flex-direction: column; width: 100%; max-width: 300px; }
+      .pill-btn { width: 100%; }
+      .btn-get-started { width: 100%; max-width: 300px; }
+    }
+    body {
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<body class="home-active">
+
+  <!-- 1. 70% OPACITY BACKGROUND VIDEO (Guaranteed visible above root background) -->
+  <video class="bg-video" autoplay loop muted playsinline id="bgVideo">
+    <source src="/static/asciify.mp4" type="video/mp4">
+  </video>
+  <div class="bg-overlay"></div>
+  <canvas id="waveCanvas"></canvas>
+
+  <!-- 2. MINIMAL HEADER -->
+  <header>
+    <div class="header-left">
+      <div class="brand-logo" onclick="switchTab('home')">stegoLab</div>
+      <nav class="nav-links">
+        <a class="nav-item" id="nav-encrypt" onclick="switchTab('encoder')">encrypt.</a>
+        <a class="nav-item" id="nav-decrypt" onclick="switchTab('decoder')">decrypt.</a>
+        <a class="nav-item" id="nav-analyze" onclick="switchTab('forensics')">analyze.</a>
+        <a class="nav-item" id="nav-layers" onclick="switchTab('layers')">layers.</a>
+      </nav>
+    </div>
+
+    <div class="header-right">
+      <button class="btn-about" onclick="switchTab('about')">About</button>
+      <button class="btn-mobile-nav" onclick="toggleMobileMenu()" aria-label="Toggle menu">☰</button>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a class="nav-item" onclick="switchTab('home'); toggleMobileMenu();">home.</a>
+    <a class="nav-item" onclick="switchTab('encoder'); toggleMobileMenu();">encrypt.</a>
+    <a class="nav-item" onclick="switchTab('decoder'); toggleMobileMenu();">decrypt.</a>
+    <a class="nav-item" onclick="switchTab('forensics'); toggleMobileMenu();">analyze.</a>
+    <a class="nav-item" onclick="switchTab('layers'); toggleMobileMenu();">layers.</a>
+    <a class="nav-item" onclick="switchTab('about'); toggleMobileMenu();">about.</a>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- VIEW 0: HOMEPAGE HERO (MATCHING USER SCREENSHOT)               -->
+  <!-- ============================================================== -->
+  <div id="view-home" class="view-panel active">
+    <div class="hero-container">
+      <div class="hero-center-content">
+        <h1 class="neon-title">stegoLab</h1>
+
+        <p class="hero-subtitle">
+          Hide text, files or whole images inside the pixels of a cover image using various techniques
+        </p>
+
+        <div class="hero-toggle-group">
+          <button class="pill-btn pill-dark" onclick="switchTab('encoder')">Encrypt</button>
+          <button class="pill-btn pill-light" onclick="switchTab('decoder')">Decrypt</button>
+        </div>
+
+        <div>
+          <button class="btn-get-started" onclick="switchTab('encoder')">Get Started</button>
+        </div>
+      </div>
+
+      <div class="home-footer">
+        <a href="https://github.com/Kowalskiye/stegoLab" target="_blank" rel="noopener noreferrer">github</a>
+        <a onclick="switchTab('about')">about</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN WORKSPACE -->
+  <main>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 1: ENCRYPT / EMBED (MINIMAL APPLE UI)                     -->
+    <!-- ============================================================== -->
+    <div id="view-encoder" class="view-panel">
+      <div class="apple-card">
+        <div class="apple-card-header">
+          <h2 class="apple-card-title">Encrypt & Hide Secret</h2>
+          <p class="apple-card-sub">Conceal secret messages or media invisibly inside cover pixels</p>
+        </div>
+
+        <form id="embedForm" onsubmit="handleEmbed(event)">
+          <!-- Cover Image Dropzone -->
+          <div class="apple-dropzone" id="coverDropzone">
+            <input type="file" name="cover" id="coverFileInput" accept="image/*" required>
+            <div class="apple-dropzone-text" id="coverFileLabel">Drop Cover Image Here</div>
+            <div class="apple-dropzone-sub">PNG, BMP, TIFF — lossless recommended</div>
+          </div>
+
+          <!-- Steganography Method Selector -->
+          <label class="form-label">Steganography Method</label>
+          <div class="segmented-control">
+            <button type="button" class="segmented-btn active" onclick="setEmbedMethod('lsb', this)">LSB Bit-Planes</button>
+            <button type="button" class="segmented-btn" onclick="setEmbedMethod('svd', this)">SVD QIM</button>
+            <button type="button" class="segmented-btn" onclick="setEmbedMethod('both', this)">Both (LSB + SVD)</button>
+          </div>
+          <input type="hidden" name="method" id="embedMethodInput" value="lsb">
+
+          <div id="bothMethodsNote" style="display:none; background:rgba(56, 189, 248, 0.08); border:1px solid rgba(56, 189, 248, 0.25); border-radius:var(--radius-sm); padding:0.75rem 1rem; margin-bottom:1.25rem; font-size:0.84rem; color:#bae6fd;">
+            <strong>Dual-Layer Mode:</strong> Embeds text into SVD (transform domain) and an image/file into LSB (high capacity). If only text is provided, it is redundantly written into both methods.
+          </div>
+
+          <!-- Payload Type Selector -->
+          <div id="payloadTypeControlGroup">
+            <label class="form-label">Secret Payload Type</label>
+            <div class="segmented-control">
+              <button type="button" class="segmented-btn active" onclick="setPayloadType('text', this)">Text</button>
+              <button type="button" class="segmented-btn" onclick="setPayloadType('image', this)">Image</button>
+              <button type="button" class="segmented-btn" onclick="setPayloadType('file', this)">File</button>
+            </div>
+          </div>
+          <input type="hidden" name="payload_type" id="payloadTypeInput" value="text">
+
+          <!-- Secret Text Message -->
+          <div id="payloadSectionText" class="form-group">
+            <label class="form-label">Secret Message</label>
+            <textarea name="text" id="payloadText" class="apple-textarea" placeholder="Enter secret message to hide...">Meet at the bridge at 0600. The passcode is Orion-9.</textarea>
+          </div>
+
+          <!-- Secret File / Image Input -->
+          <div id="payloadSectionFile" class="form-group" style="display:none">
+            <label class="form-label" id="payloadFileLabel">Upload Secret File</label>
+            <input type="file" name="payload_file" id="secretFileInput" class="apple-input">
+            <label style="display:inline-flex; align-items:center; gap:0.4rem; margin-top:0.5rem; font-size:0.84rem; color:var(--fg-muted);">
+              <input type="checkbox" name="gray" checked> Grayscale secret image (higher capacity)
+            </label>
+          </div>
+
+          <!-- Printer Machine Identification Code (MIC) Toggle -->
+          <div style="background:rgba(10, 15, 28, 0.6); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:1rem; margin-bottom:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label style="display:inline-flex; align-items:center; gap:0.5rem; margin:0; cursor:pointer; font-size:0.88rem; font-weight:600; color:#fff;">
+                <input type="checkbox" name="enable_mic" id="enableMicCheck" onchange="toggleMicControls()">
+                <span style="color:#ffffff;">Machine Identification Code (MIC Tracking Dots)</span>
+              </label>
+              <button type="button" class="sample-tag" onclick="setMicCurrentTime()">Use Current Time</button>
+            </div>
+            <p style="margin:0.35rem 0 0.75rem 0; font-size:0.78rem; color:var(--fg-muted);">
+              Printer-style tracking pattern hiding creation timestamp and custom ID in dot matrices.
+            </p>
+
+            <div id="micInputsContainer" style="display:none;">
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap:0.5rem; margin-bottom:0.75rem;">
+                <div>
+                  <label class="form-label" style="font-size:0.75rem;">Day (1-31)</label>
+                  <input type="number" name="mic_day" id="micDay" value="10" min="1" max="31" class="apple-input" style="padding:0.4rem 0.6rem;" oninput="updateLiveMicGrid()">
+                </div>
+                <div>
+                  <label class="form-label" style="font-size:0.75rem;">Month (1-12)</label>
+                  <input type="number" name="mic_month" id="micMonth" value="11" min="1" max="12" class="apple-input" style="padding:0.4rem 0.6rem;" oninput="updateLiveMicGrid()">
+                </div>
+                <div>
+                  <label class="form-label" style="font-size:0.75rem;">Year (0-99)</label>
+                  <input type="number" name="mic_year" id="micYear" value="26" min="0" max="99" class="apple-input" style="padding:0.4rem 0.6rem;" oninput="updateLiveMicGrid()">
+                </div>
+                <div>
+                  <label class="form-label" style="font-size:0.75rem;">Time</label>
+                  <input type="time" id="micTimePicker" value="13:05" class="apple-input" style="padding:0.3rem 0.5rem;" oninput="syncMicTimeFromPicker()">
+                  <input type="hidden" name="mic_hour" id="micHour" value="13">
+                  <input type="hidden" name="mic_minute" id="micMinute" value="5">
+                </div>
+                <div>
+                  <label class="form-label" style="font-size:0.75rem;">Custom ID</label>
+                  <input type="number" name="mic_custom" id="micCustom" value="42" min="0" max="255" class="apple-input" style="padding:0.4rem 0.6rem;" oninput="updateLiveMicGrid()">
+                </div>
+              </div>
+
+              <!-- Collapsible live dot pattern preview -->
+              <button type="button" class="disclosure-toggle" onclick="toggleMicTablePreview()">
+                <span id="micPreviewArrow">▶</span> View Hand-Drawn Tracking Matrix
+              </button>
+              <div id="micTableBox" class="mic-container-box" style="display:none;">
+                <div id="micLiveGrid"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clean Collapsible Advanced Settings (Keeps UI minimal) -->
+          <button type="button" class="disclosure-toggle" onclick="toggleAdvancedSettings()">
+            <span id="advArrow">▶</span> Advanced Cryptographic & Bitplane Options
+          </button>
+
+          <div id="advancedSettingsBox" class="disclosure-content">
+            <div class="form-group">
+              <label class="form-label">Secret Passphrase (PRNG Key)</label>
+              <input type="text" name="key" class="apple-input" placeholder="Optional encryption passphrase">
+            </div>
+
+            <!-- SVD Delta -->
+            <div id="advSvdSection" style="display:none;">
+              <div class="form-group">
+                <label class="form-label">SVD Delta (QIM Step 8..48)</label>
+                <input type="number" step="0.5" name="delta" value="24" class="apple-input">
+              </div>
+            </div>
+
+            <!-- LSB Channels & Planes -->
+            <div id="advLsbSection">
+              <label class="form-label">Target Channels</label>
+              <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
+                <label style="font-size:0.85rem;"><input type="checkbox" name="embed_ch" value="0" checked> Red (0)</label>
+                <label style="font-size:0.85rem;"><input type="checkbox" name="embed_ch" value="1" checked> Green (1)</label>
+                <label style="font-size:0.85rem;"><input type="checkbox" name="embed_ch" value="2" checked> Blue (2)</label>
+              </div>
+              <label class="form-label">Bit Planes</label>
+              <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <label style="font-size:0.85rem;"><input type="checkbox" name="embed_bp" value="0" checked> Plane 0 (LSB)</label>
+                <label style="font-size:0.85rem;"><input type="checkbox" name="embed_bp" value="1"> 1</label>
+                <label style="font-size:0.85rem;"><input type="checkbox" name="embed_bp" value="2"> 2</label>
+                <label style="font-size:0.85rem;"><input type="checkbox" name="embed_bp" value="7"> 7 (MSB)</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" class="apple-btn-primary" id="btnEmbedSubmit">
+            Encrypt &amp; Hide Secret
+          </button>
+        </form>
+
+        <!-- Result Section -->
+        <div id="embedResultsSection" class="apple-result-card">
+          <div style="text-align:center;">
+            <div class="verdict-pill verdict-clean" id="embedPsnrBadge">PSNR: 65.4 dB</div>
+            <h3 style="margin:0.25rem 0 1rem 0; color:#fff; font-size:1.3rem;">Embedding Complete</h3>
+            <img id="stegoResultImg" style="max-height:260px; max-width:100%; border-radius:12px; border:1px solid var(--card-border); margin-bottom:1rem;">
+            <div class="btn-row">
+              <a id="btnDownloadStego" class="apple-btn-primary" style="width:auto; padding:0.6rem 1.5rem;" download="stego.png">Download Stego Image</a>
+              <button type="button" class="btn-secondary" onclick="sendStegoToLayers()">View in Layers</button>
+              <button type="button" class="btn-secondary" onclick="sendStegoToDecoder()">Verify in Decoder</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 2: DECRYPT / DECODER (MINIMAL APPLE UI)                   -->
+    <!-- ============================================================== -->
+    <div id="view-decoder" class="view-panel">
+      <div class="apple-card">
+        <div class="apple-card-header">
+          <h2 class="apple-card-title">Universal Decrypt</h2>
+          <p class="apple-card-sub">Automatically probes LSB bitplanes, SVD lattice QIM, and printer tracking dots</p>
+        </div>
+
+        <form id="autoDecodeForm" onsubmit="handleAutoDecode(event)">
+          <div class="apple-dropzone" id="decodeDropzone">
+            <input type="file" name="stego" id="decodeFileInput" accept="image/*" required>
+            <div class="apple-dropzone-text" id="decodeFileLabel">Drop Stego Image to Reveal</div>
+            <div class="apple-dropzone-sub">PNG, BMP, TIFF</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Secret Passphrase (Optional)</label>
+            <input type="text" name="key" class="apple-input" placeholder="Leave blank if unencrypted">
+          </div>
+
+          <button type="submit" class="apple-btn-primary" id="btnRunAutoDecode">
+            Reveal Hidden Secrets
+          </button>
+        </form>
+
+        <!-- Decoder Results -->
+        <div id="decodeResultsSection" class="apple-result-card">
+          <div id="decodeVerdictBanner" class="verdict-pill verdict-found">
+            <span id="decodeVerdictText">Scanning...</span>
+          </div>
+
+          <!-- MIC tracking card if found -->
+          <div id="cardResultMIC" style="display:none; background:rgba(34, 197, 94, 0.08); border:1px solid rgba(34, 197, 94, 0.25); border-radius:var(--radius-sm); padding:1rem; margin-bottom:1.25rem;">
+            <div style="font-weight:700; color:#4ade80; margin-bottom:0.5rem; font-size:0.95rem;">
+              Printer Machine Identification Code (MIC) Detected
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.5rem; font-size:0.88rem;">
+              <div><span class="form-label">Date</span><strong id="micDecDate" style="color:#fff;">-</strong></div>
+              <div><span class="form-label">Time</span><strong id="micDecTime" style="color:#38bdf8;">-</strong></div>
+              <div><span class="form-label">Custom ID</span><strong id="micDecCustom" style="color:#facc15;">-</strong></div>
+            </div>
+          </div>
+
+          <!-- Payload Display -->
+          <div id="revealOutputContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 3: FORENSICS & STEGANALYSIS (MINIMAL APPLE UI)            -->
+    <!-- ============================================================== -->
+    <div id="view-forensics" class="view-panel">
+      <div class="apple-card">
+        <div class="apple-card-header">
+          <h2 class="apple-card-title">Blind Steganalysis</h2>
+          <p class="apple-card-sub">Multi-scale SVD lattice resonance, calibrated Chi-Square, and signature inspection</p>
+        </div>
+
+        <form id="detectForm" onsubmit="handleDetect(event)">
+          <div class="apple-dropzone" id="detectDropzone">
+            <input type="file" name="image" id="detectFileInput" accept="image/*" required>
+            <div class="apple-dropzone-text" id="detectFileLabel">Select Image for Analysis</div>
+            <div class="apple-dropzone-sub">Evaluates statistical distortions and periodic lattices</div>
+          </div>
+
+          <button type="submit" class="apple-btn-primary" id="btnRunDetect">
+            Run Steganalysis
+          </button>
+        </form>
+
+        <div id="detectOutput" class="apple-result-card">
+          <div id="detectVerdictBadge" class="verdict-pill verdict-clean">Verdict: Clean</div>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-top:1rem;">
+            <div style="background:rgba(15, 23, 42, 0.6); padding:1rem; border-radius:var(--radius-sm); border:1px solid var(--card-border);">
+              <div style="font-weight:600; color:#fff; font-size:0.9rem; margin-bottom:0.35rem;">SVD QIM Resonance</div>
+              <div id="forensicBodySvd" style="font-size:0.82rem; color:var(--fg-muted);"></div>
+            </div>
+            <div style="background:rgba(15, 23, 42, 0.6); padding:1rem; border-radius:var(--radius-sm); border:1px solid var(--card-border);">
+              <div style="font-weight:600; color:#fff; font-size:0.9rem; margin-bottom:0.35rem;">LSB Pairs of Values</div>
+              <div id="forensicBodyLsb" style="font-size:0.82rem; color:var(--fg-muted);"></div>
+            </div>
+            <div style="background:rgba(15, 23, 42, 0.6); padding:1rem; border-radius:var(--radius-sm); border:1px solid var(--card-border);">
+              <div style="font-weight:600; color:#fff; font-size:0.9rem; margin-bottom:0.35rem;">Signatures & Tracking</div>
+              <div id="forensicBodyMic" style="font-size:0.82rem; color:var(--fg-muted);"></div>
+            </div>
+          </div>
+
+          <!-- Resonance curve -->
+          <div style="margin-top:1.5rem; text-align:center;">
+            <label class="form-label">SVD Periodic Lattice Spectrum: R(&Delta;)</label>
+            <img id="detectProfileImg" style="width:100%; border-radius:10px; border:1px solid var(--card-border); background:#020409;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 4: BIT PLANES & LAYERS (MINIMAL APPLE UI)                 -->
+    <!-- ============================================================== -->
+    <div id="view-layers" class="view-panel">
+      <div class="apple-card">
+        <div class="apple-card-header">
+          <h2 class="apple-card-title">Bit Planes & Layers</h2>
+          <p class="apple-card-sub">Extract and examine individual RGB bit planes from 0 (LSB) to 7 (MSB)</p>
+        </div>
+
+        <div class="apple-dropzone" id="layerDropzone">
+          <input type="file" id="layerFileInput" accept="image/*">
+          <div class="apple-dropzone-text">Drop Image to Inspect Bit Planes</div>
+          <div class="apple-dropzone-sub">Instantly decomposes into 24 bit planes</div>
+        </div>
+
+        <div id="layerWorkspace" style="display:none;">
+          <!-- Segmented Channel Picker -->
+          <label class="form-label">Select Color Channel</label>
+          <div class="segmented-control">
+            <button type="button" class="segmented-btn active" onclick="setLayerChannel(0, this)">Red</button>
+            <button type="button" class="segmented-btn" onclick="setLayerChannel(1, this)">Green</button>
+            <button type="button" class="segmented-btn" onclick="setLayerChannel(2, this)">Blue</button>
+            <button type="button" class="segmented-btn" onclick="setLayerChannel(3, this)">RGB Composite</button>
+          </div>
+
+          <!-- Segmented Plane Picker (0..7) with Arrow Navigation hint -->
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label class="form-label" style="margin-bottom:0.25rem;">Select Bit Plane</label>
+            <span style="font-size:0.75rem; color:var(--cyan); font-family:var(--mono);">Use &larr; &rarr; or &uarr; &darr; arrow keys to navigate</span>
+          </div>
+          <div class="segmented-control" id="planeSegmentedControl">
+            <button type="button" class="segmented-btn active" data-plane="0" onclick="setLayerPlane(0, this)">0 (LSB)</button>
+            <button type="button" class="segmented-btn" data-plane="1" onclick="setLayerPlane(1, this)">1</button>
+            <button type="button" class="segmented-btn" data-plane="2" onclick="setLayerPlane(2, this)">2</button>
+            <button type="button" class="segmented-btn" data-plane="3" onclick="setLayerPlane(3, this)">3</button>
+            <button type="button" class="segmented-btn" data-plane="4" onclick="setLayerPlane(4, this)">4</button>
+            <button type="button" class="segmented-btn" data-plane="5" onclick="setLayerPlane(5, this)">5</button>
+            <button type="button" class="segmented-btn" data-plane="6" onclick="setLayerPlane(6, this)">6</button>
+            <button type="button" class="segmented-btn" data-plane="7" onclick="setLayerPlane(7, this)">7 (MSB)</button>
+          </div>
+
+          <!-- Action Controls -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin:1rem 0; flex-wrap:wrap; gap:0.5rem;">
+            <div style="display:flex; gap:1rem; font-size:0.86rem;">
+              <label style="cursor:pointer;"><input type="checkbox" id="layerTintToggle" onchange="renderActiveLayer()"> Tint with Channel Color</label>
+              <label style="cursor:pointer;"><input type="checkbox" id="layerInvertToggle" onchange="renderActiveLayer()"> Invert</label>
+            </div>
+            <div class="btn-row">
+              <button class="btn-secondary" onclick="downloadCurrentLayer()">Download PNG</button>
+              <button class="btn-secondary" onclick="downloadAllLayersZip()">Download All (ZIP)</button>
+            </div>
+          </div>
+
+          <div class="stage-wrapper">
+            <canvas id="stageCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 5: DEDICATED ABOUT PAGE (BEAUTIFUL ESSAY)                 -->
+    <!-- ============================================================== -->
+    <div id="view-about" class="view-panel">
+      <article class="about-article">
+        <h1>About stegoLab</h1>
+        <p style="text-align:center; font-size:1.15rem; color:var(--cyan); margin-bottom:2.5rem;">
+          The Science of Invisible Communication & Forensic Detection
+        </p>
+
+        <h2>What is Steganography?</h2>
+        <p>
+          Derived from the Greek <em>steganos</em> ("covered") and <em>graphein</em> ("writing"), steganography is the practice of concealing secret information within an ordinary, innocent-looking carrier file—such as a digital photograph—in such a way that no one suspects anything is hidden at all.
+        </p>
+        <p>
+          Unlike cryptography, which scrambles a message to make it unreadable but openly advertises its existence, steganography hides the very fact that a communication is taking place.
+        </p>
+
+        <h2>How the Techniques in stegoLab Work</h2>
+
+        <div class="about-card-box">
+          <h3>1. Bit-Plane LSB (Least Significant Bit)</h3>
+          <p>
+            Digital images represent pixels using RGB color channels, each typically 8 bits deep (values 0–255). The lowest bit (Bit 0) carries the smallest numerical weight (&plusmn;1 intensity level). Replacing the LSB of pixels with secret bits causes visual changes imperceptible to the human eye, yet recovers 100% of the hidden payload upon extraction.
+          </p>
+        </div>
+
+        <div class="about-card-box">
+          <h3>2. SVD QIM (Singular Value Decomposition)</h3>
+          <p>
+            Rather than altering spatial pixel values directly, Singular Value Decomposition decomposes an image block <em>A</em> into <em>U</em>&Sigma;<em>V</em><sup>T</sup>, where the singular values &Sigma; = diag(&sigma;<sub>1</sub>, &sigma;<sub>2</sub>, &hellip;) describe the primary geometric energy of the block.
+          </p>
+          <p>
+            stegoLab applies Quantization Index Modulation (QIM) to the dominant singular value &sigma;<sub>1</sub>, shifting it to the nearest lattice point corresponding to a 0 or 1 bit with step &Delta;. This method offers higher resistance against mild noise and compression.
+          </p>
+        </div>
+
+        <div class="about-card-box">
+          <h3>3. Machine Identification Codes (MIC / Printer Tracking Dots)</h3>
+          <p>
+            Color laser printers subtly encode secret tracking dots across pages to identify the specific printer serial number, date, and exact timestamp of printing. stegoLab implements an authentic 8-row binary dot matrix with green separator columns and corner alignment brackets (&#9484; and &#9524;), allowing digital images to carry indelible watermarks and provenance records.
+          </p>
+        </div>
+
+        <div class="about-card-box">
+          <h3>4. Multi-Scale Blind Steganalysis</h3>
+          <p>
+            To detect hidden payloads without knowing the secret key, stegoLab performs multi-scale statistical analysis:
+          </p>
+          <ul style="color:var(--fg-muted); padding-left:1.25rem;">
+            <li><strong>Lattice Resonance Spectrum <em>R</em>(&Delta;):</strong> Measures periodic clustering of singular values to detect QIM steps.</li>
+            <li><strong>Calibrated Chi-Square (&chi;<sup>2</sup>):</strong> Identifies frequency equalization anomalies between adjacent pairs of values (PoVs) characteristic of LSB overwriting.</li>
+            <li><strong>Direct Framing Probe:</strong> Verifies structured Reed-Solomon protected headers.</li>
+          </ul>
+        </div>
+
+        <h2>Privacy & In-Memory Execution</h2>
+        <p>
+          Everything in stegoLab executes purely in volatile memory (RAM). Uploaded images, payload files, and secret keys are never written to server disks or sent across external networks.
+        </p>
+
+        <div style="text-align:center; margin-top:3rem;">
+          <button class="btn-get-started" onclick="switchTab('encoder')">Try Steganography Now</button>
+        </div>
+      </article>
+    </div>
+
+  </main>
+
+  <script>
+    // Global State
+    let activeImage = null;
+    let activeImageData = null;
+    let currentChannel = 0; // 0=Red, 1=Green, 2=Blue, 3=Composite
+    let currentPlane = 0;   // 0=LSB .. 7=MSB
+    let stegoResultDataUrl = null;
+
+    // Force video playback on boot
+    window.addEventListener("DOMContentLoaded", () => {
+      const vid = document.getElementById("bgVideo");
+      if(vid) {
+        vid.muted = true;
+        vid.play().catch(e => console.log("Video autoplay prevented:", e));
+      }
+      setMicCurrentTime();
+
+      if(window.location.pathname.includes("/about") || window.location.hash.includes("about")) {
+        switchTab('about');
+      }
+    });
+
+    // Navigation Switcher
+    function switchTab(tabId) {
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".nav-item").forEach(a => a.classList.remove("active"));
+
+      const target = document.getElementById(`view-${tabId}`);
+      if(target) target.classList.add("active");
+
+      // Lock vertical scrolling on homepage so it fits the viewport cleanly without a scrollbar
+      if(tabId === 'home') {
+        document.body.classList.add("home-active");
+      } else {
+        document.body.classList.remove("home-active");
+      }
+
+      const navMap = {
+        'encoder': 'nav-encrypt',
+        'decoder': 'nav-decrypt',
+        'forensics': 'nav-analyze',
+        'layers': 'nav-layers'
+      };
+      if(navMap[tabId]) {
+        const el = document.getElementById(navMap[tabId]);
+        if(el) el.classList.add("active");
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function toggleMobileMenu() {
+      document.getElementById("mobileMenu").classList.toggle("open");
+    }
+
+    // Segmented UI Handlers
+    function setPayloadType(type, btn) {
+      document.getElementById("payloadTypeInput").value = type;
+      btn.parentElement.querySelectorAll(".segmented-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      document.getElementById("payloadSectionText").style.display = type === "text" ? "block" : "none";
+      document.getElementById("payloadSectionFile").style.display = type !== "text" ? "block" : "none";
+      document.getElementById("payloadFileLabel").textContent = type === "image" ? "Upload Secret Image" : "Upload Secret Binary File";
+    }
+
+    function setEmbedMethod(method, btn) {
+      document.getElementById("embedMethodInput").value = method;
+      btn.parentElement.querySelectorAll(".segmented-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      const pTypeControl = document.getElementById("payloadTypeControlGroup");
+      const textSec = document.getElementById("payloadSectionText");
+      const fileSec = document.getElementById("payloadSectionFile");
+      const bothNote = document.getElementById("bothMethodsNote");
+
+      if (method === "both") {
+        if(pTypeControl) pTypeControl.style.display = "none";
+        if(bothNote) bothNote.style.display = "block";
+        textSec.style.display = "block";
+        fileSec.style.display = "block";
+        document.getElementById("payloadFileLabel").textContent = "Upload Secret Image or File (Optional for SVD Layer)";
+      } else {
+        if(pTypeControl) pTypeControl.style.display = "block";
+        if(bothNote) bothNote.style.display = "none";
+        const currentType = document.getElementById("payloadTypeInput").value;
+        textSec.style.display = currentType === "text" ? "block" : "none";
+        fileSec.style.display = currentType !== "text" ? "block" : "none";
+        document.getElementById("payloadFileLabel").textContent = currentType === "image" ? "Upload Secret Image" : "Upload Secret Binary File";
+      }
+
+      document.getElementById("advLsbSection").style.display = (method === "lsb" || method === "both") ? "block" : "none";
+      document.getElementById("advSvdSection").style.display = (method === "svd" || method === "both") ? "block" : "none";
+    }
+
+    function toggleAdvancedSettings() {
+      const box = document.getElementById("advancedSettingsBox");
+      const arrow = document.getElementById("advArrow");
+      box.classList.toggle("open");
+      arrow.textContent = box.classList.contains("open") ? "▼" : "▶";
+    }
+
+    function toggleMicControls() {
+      const on = document.getElementById("enableMicCheck").checked;
+      document.getElementById("micInputsContainer").style.display = on ? "block" : "none";
+    }
+
+    function toggleMicTablePreview() {
+      const box = document.getElementById("micTableBox");
+      const arrow = document.getElementById("micPreviewArrow");
+      const isHidden = box.style.display === "none";
+      box.style.display = isHidden ? "block" : "none";
+      arrow.textContent = isHidden ? "▼" : "▶";
+    }
+
+    // ==============================================================
+    // 1. EMBED / ENCRYPT
+    // ==============================================================
+    document.getElementById("coverFileInput").addEventListener("change", function() {
+      if(this.files && this.files[0]) {
+        document.getElementById("coverFileLabel").textContent = this.files[0].name;
+      }
+    });
+
+    async function loadSampleToCover(name) {
+      const r = await fetch(`/api/sample/${name}`);
+      const b = await r.blob();
+      const file = new File([b], name, { type: "image/png" });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      document.getElementById("coverFileInput").files = dt.files;
+      document.getElementById("coverFileLabel").textContent = name;
+    }
+
+    async function handleEmbed(e) {
+      e.preventDefault();
+      const form = e.target;
+      const btn = document.getElementById("btnEmbedSubmit");
+      btn.innerHTML = `<span class="spinner"></span> Encrypting into pixels...`;
+      btn.disabled = true;
+
+      const fd = new FormData(form);
+      const chs = Array.from(form.querySelectorAll("input[name='embed_ch']:checked")).map(el => el.value);
+      const bps = Array.from(form.querySelectorAll("input[name='embed_bp']:checked")).map(el => el.value);
+      fd.set("channels", chs.length ? chs.join(" ") : "0 1 2");
+      fd.set("planes", bps.length ? bps.join(" ") : "0");
+
+      try {
+        const resp = await fetch("/api/embed", { method: "POST", body: fd });
+        const res = await resp.json();
+        if(res.error) throw new Error(res.error);
+
+        const outSec = document.getElementById("embedResultsSection");
+        outSec.style.display = "block";
+        document.getElementById("embedPsnrBadge").textContent = `PSNR: ${res.report.psnr_db} dB`;
+
+        stegoResultDataUrl = `data:image/png;base64,${res.stego_png}`;
+        document.getElementById("stegoResultImg").src = stegoResultDataUrl;
+        document.getElementById("btnDownloadStego").href = stegoResultDataUrl;
+
+        outSec.scrollIntoView({ behavior: "smooth" });
+      } catch(err) {
+        alert("Embedding failed: " + err.message);
+      } finally {
+        btn.innerHTML = "Encrypt &amp; Hide Secret";
+        btn.disabled = false;
+      }
+    }
+
+    function sendStegoToLayers() {
+      if(!stegoResultDataUrl) return;
+      const img = new Image();
+      img.onload = () => {
+        setupLayerWorkspace(img, "stego.png");
+        switchTab("layers");
+      };
+      img.src = stegoResultDataUrl;
+    }
+
+    async function sendStegoToDecoder() {
+      if(!stegoResultDataUrl) return;
+      const res = await fetch(stegoResultDataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], "stego.png", { type: "image/png" });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      document.getElementById("decodeFileInput").files = dt.files;
+      document.getElementById("decodeFileLabel").textContent = "stego.png";
+      switchTab("decoder");
+      document.getElementById("btnRunAutoDecode").click();
+    }
+
+    // ==============================================================
+    // 2. UNIVERSAL DECODER
+    // ==============================================================
+    document.getElementById("decodeFileInput").addEventListener("change", function() {
+      if(this.files && this.files[0]) {
+        document.getElementById("decodeFileLabel").textContent = this.files[0].name;
+      }
+    });
+
+    async function loadSampleToDecoder(name) {
+      const r = await fetch(`/api/sample/${name}`);
+      const b = await r.blob();
+      const file = new File([b], name, { type: "image/png" });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      document.getElementById("decodeFileInput").files = dt.files;
+      document.getElementById("decodeFileLabel").textContent = name;
+    }
+
+    async function handleAutoDecode(e) {
+      e.preventDefault();
+      const form = e.target;
+      const btn = document.getElementById("btnRunAutoDecode");
+      btn.innerHTML = `<span class="spinner"></span> Revealing secrets...`;
+      btn.disabled = true;
+
+      const outSec = document.getElementById("decodeResultsSection");
+      outSec.style.display = "block";
+      document.getElementById("decodeVerdictText").textContent = "Probing LSB, SVD & MIC...";
+
+      const fd = new FormData(form);
+      try {
+        const resp = await fetch("/api/auto_decode", { method: "POST", body: fd });
+        const data = await resp.json();
+        if(data.error) throw new Error(data.error);
+
+        const vText = document.getElementById("decodeVerdictText");
+        const vBanner = document.getElementById("decodeVerdictBanner");
+        if(data.summary.payload_found || data.summary.mic_detected) {
+          vBanner.className = "verdict-pill verdict-clean";
+          vText.textContent = data.summary.verdict;
+        } else {
+          vBanner.className = "verdict-pill verdict-warn";
+          vText.textContent = data.summary.verdict;
+        }
+
+        // MIC Result
+        const micCard = document.getElementById("cardResultMIC");
+        if(data.mic) {
+          micCard.style.display = "block";
+          document.getElementById("micDecDate").textContent = data.mic.metadata.date_str;
+          document.getElementById("micDecTime").textContent = data.mic.metadata.time_str;
+          document.getElementById("micDecCustom").textContent = `#${data.mic.metadata.custom_number}`;
+        } else {
+          micCard.style.display = "none";
+        }
+
+        // Collect ALL detected payloads across both layers
+        const foundList = [];
+        if(data.lsb && data.lsb.status === "found") {
+          const lsbItems = (data.lsb.all_found && data.lsb.all_found.length > 0) ? data.lsb.all_found : (data.lsb.payload ? [data.lsb] : []);
+          lsbItems.forEach(item => {
+            foundList.push({
+              methodTitle: `LSB (${item.label || 'Bit-Planes'})`,
+              badgeStyle: "background:rgba(56, 189, 248, 0.2); color:#38bdf8; border:1px solid rgba(56, 189, 248, 0.4);",
+              configInfo: `Planes: ${JSON.stringify(item.planes)} | Channels: ${JSON.stringify(item.channels)}`,
+              ...item.payload
+            });
+          });
+        }
+        if(data.svd && data.svd.status === "found" && data.svd.payload) {
+          foundList.push({
+            methodTitle: "SVD QIM (Singular Value Decomposition)",
+            badgeStyle: "background:rgba(168, 85, 247, 0.2); color:#c084fc; border:1px solid rgba(168, 85, 247, 0.4);",
+            configInfo: `Delta: ${data.svd.delta} | k: ${data.svd.k} | Robust: ${data.svd.robust}`,
+            ...data.svd.payload
+          });
+        }
+
+        // Render ALL discovered payloads
+        const container = document.getElementById("revealOutputContainer");
+        let html = "";
+        if(foundList.length > 0) {
+          foundList.forEach((item, idx) => {
+            let itemContent = "";
+            let kindBadge = "";
+
+            if(item.kind === "text") {
+              kindBadge = `<span style="font-size:0.75rem; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:999px; color:#fff;">Text (${item.bytes} bytes)</span>`;
+              itemContent = `
+                <div style="background:#020409; padding:1.15rem; border-radius:10px; font-family:var(--mono); font-size:0.92rem; line-height:1.6; word-break:break-all; border:1px solid var(--card-border); margin:0.75rem 0;">${escapeHtml(item.text)}</div>
+                <button type="button" class="btn-secondary" onclick="copyToClipboard('${escapeJs(item.text)}')">Copy Message</button>
+              `;
+            } else if(item.kind === "image") {
+              kindBadge = `<span style="font-size:0.75rem; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:999px; color:#fff;">Image (${item.bytes} bytes${item.image_size ? ', ' + item.image_size : ''})</span>`;
+              itemContent = `
+                <div style="text-align:center; margin:0.75rem 0;">
+                  <img style="max-height:240px; max-width:100%; border-radius:10px; border:1px solid var(--card-border); box-shadow:0 4px 20px rgba(0,0,0,0.5);" src="data:image/png;base64,${item.data_b64}">
+                  <div style="margin-top:0.75rem;">
+                    <a class="apple-btn-primary" style="display:inline-flex; width:auto; padding:0.55rem 1.4rem;" download="extracted_secret_${idx+1}.png" href="data:image/png;base64,${item.data_b64}">Download Extracted Image</a>
+                  </div>
+                </div>
+              `;
+            } else {
+              kindBadge = `<span style="font-size:0.75rem; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:999px; color:#fff;">File (${item.bytes} bytes)</span>`;
+              itemContent = `
+                <div style="margin:0.75rem 0;">
+                  <a class="apple-btn-primary" style="display:inline-flex; width:auto; padding:0.55rem 1.4rem;" download="extracted_file_${idx+1}.bin" href="data:application/octet-stream;base64,${item.data_b64}">Download File (${item.bytes} B)</a>
+                </div>
+              `;
+            }
+
+            html += `
+              <div style="background:rgba(15, 23, 42, 0.7); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:1.25rem; margin-bottom:1.25rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem;">
+                  <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span style="font-size:0.8rem; font-weight:700; padding:2px 10px; border-radius:999px; ${item.badgeStyle}">${item.methodTitle}</span>
+                    ${kindBadge}
+                  </div>
+                  <span style="font-size:0.75rem; color:var(--fg-muted); font-family:var(--mono);">${item.configInfo}</span>
+                </div>
+                ${itemContent}
+              </div>
+            `;
+          });
+        } else if(!data.mic) {
+          html = `<p style="color:var(--fg-muted); font-size:0.92rem; text-align:center; padding:1.5rem 0;">No hidden messages detected in standard bitplanes or SVD lattice.</p>`;
+        }
+        container.innerHTML = html;
+        outSec.scrollIntoView({ behavior: "smooth" });
+
+      } catch(err) {
+        document.getElementById("decodeVerdictText").textContent = "Error: " + err.message;
+      } finally {
+        btn.innerHTML = "Reveal Hidden Secrets";
+        btn.disabled = false;
+      }
+    }
+
+    // ==============================================================
+    // 3. STEGANALYSIS
+    // ==============================================================
+    document.getElementById("detectFileInput").addEventListener("change", function() {
+      if(this.files && this.files[0]) {
+        document.getElementById("detectFileLabel").textContent = this.files[0].name;
+      }
+    });
+
+    async function handleDetect(e) {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const btn = document.getElementById("btnRunDetect");
+      btn.innerHTML = `<span class="spinner"></span> Analyzing...`;
+      btn.disabled = true;
+
+      try {
+        const resp = await fetch("/api/detect", { method: "POST", body: fd });
+        const res = await resp.json();
+        if(res.error) throw new Error(res.error);
+
+        document.getElementById("detectOutput").style.display = "block";
+        const vBadge = document.getElementById("detectVerdictBadge");
+        const clean = res.verdict === "clean";
+        vBadge.textContent = `Verdict: ${res.verdict}`;
+        vBadge.className = clean ? "verdict-pill verdict-clean" : "verdict-pill verdict-warn";
+
+        // SVD card
+        const sv = res.svd_lattice || {};
+        document.getElementById("forensicBodySvd").innerHTML = sv.detected ?
+          `<span style="color:#facc15;">Periodic Lattice Detected (delta=${sv.delta}, Z=${sv.z ? sv.z.toFixed(1) : ''})</span>` :
+          `Clean (no periodic QIM modulation detected)`;
+
+        // LSB card
+        const chi = res.lsb_chi_square || {};
+        const sig = res.signature || {};
+        if(sig.found) {
+          document.getElementById("forensicBodyLsb").innerHTML = `<span style="color:#38bdf8;">SGL1 Payload Header Confirmed (${sig.payload_bytes} B)</span>`;
+        } else if(chi.detected) {
+          document.getElementById("forensicBodyLsb").innerHTML = `<span style="color:#f87171;">LSB Pair-of-Values Anomaly Detected (p=${chi.p_embedded})</span>`;
+        } else {
+          document.getElementById("forensicBodyLsb").innerHTML = `Clean (p=${chi.p_embedded || '0.00'})`;
+        }
+
+        // MIC card
+        const micInfo = res.mic || {};
+        document.getElementById("forensicBodyMic").innerHTML = micInfo.found ?
+          `<span style="color:#4ade80;">Printer Tracking MIC Found (${micInfo.metadata.date_str})</span>` :
+          `None detected`;
+
+        document.getElementById("detectProfileImg").src = `data:image/png;base64,${res.profile_png}`;
+        document.getElementById("detectOutput").scrollIntoView({ behavior: "smooth" });
+      } catch(err) {
+        alert("Detect failed: " + err.message);
+      } finally {
+        btn.innerHTML = "🔬 Run Steganalysis";
+        btn.disabled = false;
+      }
+    }
+
+    // ==============================================================
+    // 4. BIT PLANES & LAYERS INSPECTOR
+    // ==============================================================
+    document.getElementById("layerFileInput").addEventListener("change", function() {
+      if(this.files && this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => setupLayerWorkspace(img, this.files[0].name);
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(this.files[0]);
+      }
+    });
+
+    async function loadSampleToLayers(name) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => setupLayerWorkspace(img, name);
+      img.src = `/api/sample/${name}`;
+    }
+
+    function setupLayerWorkspace(img, name) {
+      activeImage = img;
+      document.getElementById("layerWorkspace").style.display = "block";
+
+      const c = document.createElement("canvas");
+      c.width = img.width; c.height = img.height;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      activeImageData = ctx.getImageData(0, 0, img.width, img.height);
+      renderActiveLayer();
+    }
+
+    function setLayerChannel(ch, btn) {
+      currentChannel = ch;
+      btn.parentElement.querySelectorAll(".segmented-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderActiveLayer();
+    }
+
+    function setLayerPlane(p, btn) {
+      currentPlane = Math.max(0, Math.min(7, p));
+      const buttons = document.querySelectorAll("#planeSegmentedControl .segmented-btn");
+      buttons.forEach(b => {
+        if(parseInt(b.dataset.plane, 10) === currentPlane) {
+          b.classList.add("active");
+        } else {
+          b.classList.remove("active");
+        }
+      });
+      renderActiveLayer();
+    }
+
+    // Keyboard arrow keys for bit plane navigation
+    window.addEventListener("keydown", (e) => {
+      // Only navigate when layers tab is active and not typing in an input
+      const layersView = document.getElementById("view-layers");
+      if(!layersView || !layersView.classList.contains("active")) return;
+      if(["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+
+      if(e.key === "ArrowRight" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const nextPlane = (currentPlane + 1) % 8;
+        setLayerPlane(nextPlane);
+      } else if(e.key === "ArrowLeft" || e.key === "ArrowDown") {
+        e.preventDefault();
+        const prevPlane = (currentPlane - 1 + 8) % 8;
+        setLayerPlane(prevPlane);
+      }
+    });
+
+    function renderActiveLayer() {
+      if(!activeImageData) return;
+      const canvas = document.getElementById("stageCanvas");
+      canvas.width = activeImageData.width;
+      canvas.height = activeImageData.height;
+      const ctx = canvas.getContext("2d");
+
+      const out = ctx.createImageData(canvas.width, canvas.height);
+      const src = activeImageData.data;
+      const dst = out.data;
+      const len = src.length;
+      const tinted = document.getElementById("layerTintToggle").checked;
+      const invert = document.getElementById("layerInvertToggle").checked;
+
+      if(currentChannel < 3) {
+        // Single Channel Bitplane
+        const ch = currentChannel;
+        const p = currentPlane;
+        for(let i=0; i<len; i+=4) {
+          let bit = (src[i + ch] >> p) & 1;
+          if(invert) bit = 1 - bit;
+          const val = bit ? 255 : 0;
+          if(!tinted) {
+            dst[i] = val; dst[i+1] = val; dst[i+2] = val; dst[i+3] = 255;
+          } else {
+            dst[i] = ch === 0 ? val : 0;
+            dst[i+1] = ch === 1 ? val : 0;
+            dst[i+2] = ch === 2 ? val : 0;
+            dst[i+3] = 255;
+          }
+        }
+      } else {
+        // RGB Composite Bitplane
+        const p = currentPlane;
+        for(let i=0; i<len; i+=4) {
+          let r = (src[i] >> p) & 1;
+          let g = (src[i+1] >> p) & 1;
+          let b = (src[i+2] >> p) & 1;
+          if(invert) { r = 1 - r; g = 1 - g; b = 1 - b; }
+          dst[i] = r * 255; dst[i+1] = g * 255; dst[i+2] = b * 255; dst[i+3] = 255;
+        }
+      }
+      ctx.putImageData(out, 0, 0);
+    }
+
+    function downloadCurrentLayer() {
+      const canvas = document.getElementById("stageCanvas");
+      const a = document.createElement("a");
+      a.download = `bitplane_ch${currentChannel}_plane${currentPlane}.png`;
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    }
+
+    async function downloadAllLayersZip() {
+      if(!activeImage) return;
+      const c = document.createElement("canvas");
+      c.width = activeImage.width; c.height = activeImage.height;
+      c.getContext("2d").drawImage(activeImage, 0, 0);
+      c.toBlob(async (blob) => {
+        const fd = new FormData();
+        fd.append("image", blob, "image.png");
+        try {
+          const res = await fetch("/api/layers/zip", { method: "POST", body: fd });
+          const zipBlob = await res.blob();
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(zipBlob);
+          a.download = "all_layers.zip";
+          a.click();
+        } catch(e) {
+          alert("ZIP download failed: " + e);
+        }
+      });
+    }
+
+    // ==============================================================
+    // 5. MIC TRACKING DOTS TABLE GENERATOR
+    // ==============================================================
+    function syncMicTimeFromPicker() {
+      const picker = document.getElementById("micTimePicker");
+      if(picker.value) {
+        const parts = picker.value.split(":");
+        document.getElementById("micHour").value = parseInt(parts[0], 10);
+        document.getElementById("micMinute").value = parseInt(parts[1], 10);
+      }
+      updateLiveMicGrid();
+    }
+
+    function setMicCurrentTime() {
+      const now = new Date();
+      document.getElementById("micDay").value = now.getDate();
+      document.getElementById("micMonth").value = now.getMonth() + 1;
+      document.getElementById("micYear").value = now.getFullYear() % 100;
+      const h = String(now.getHours()).padStart(2, "0");
+      const m = String(now.getMinutes()).padStart(2, "0");
+      document.getElementById("micTimePicker").value = `${h}:${m}`;
+      document.getElementById("micHour").value = now.getHours();
+      document.getElementById("micMinute").value = now.getMinutes();
+      updateLiveMicGrid();
+    }
+
+    function updateLiveMicGrid() {
+      const d = parseInt(document.getElementById("micDay").value, 10) || 1;
+      const m = parseInt(document.getElementById("micMonth").value, 10) || 1;
+      const y = parseInt(document.getElementById("micYear").value, 10) || 0;
+      const h = parseInt(document.getElementById("micHour").value, 10) || 0;
+      const min = parseInt(document.getElementById("micMinute").value, 10) || 0;
+      const c = parseInt(document.getElementById("micCustom").value, 10) || 0;
+
+      const rows = [1, 2, 4, 8, 16, 32, 64, 128];
+      let html = `<table class="mic-table"><thead><tr>
+        <th>Bit</th><th>Day (${d})</th><th class="mic-sep-th">|</th><th>Month (${m})</th><th class="mic-sep-th">|</th><th>Year ('${String(y%100).padStart(2,'0')})</th><th class="mic-sep-th">|</th><th>Custom (${h}:${String(min).padStart(2,'0')} #${c})</th>
+      </tr></thead><tbody>`;
+
+      for(let r=0; r<8; r++) {
+        const isTop = (r === 0);
+        const isBottom = (r === 7);
+        html += `<tr>
+          <td style="color:#94a3b8;">${rows[r]}</td>
+          <td>${isTop ? '<span class="mic-corner-marker mic-corner-tl">┌</span>' : ''}<span class="mic-dot ${((d >> r) & 1) ? 'active' : 'inactive'}"></span></td>
+          <td class="mic-sep-td"><span class="mic-dot sep"></span></td>
+          <td><span class="mic-dot ${((m >> r) & 1) ? 'active' : 'inactive'}"></span></td>
+          <td class="mic-sep-td"><span class="mic-dot sep"></span></td>
+          <td><span class="mic-dot ${((y >> r) & 1) ? 'active' : 'inactive'}"></span></td>
+          <td class="mic-sep-td"><span class="mic-dot sep"></span></td>
+          <td><span class="mic-dot ${((c >> r) & 1) ? 'active' : 'inactive'}"></span>${isBottom ? '<span class="mic-corner-marker mic-corner-br">┘</span>' : ''}</td>
+        </tr>`;
+      }
+      html += `</tbody></table>`;
+      const container = document.getElementById("micLiveGrid");
+      if(container) container.innerHTML = html;
+    }
+
+    // Utilities
+    function escapeHtml(str) {
+      if(!str) return "";
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    function escapeJs(str) {
+      if(!str) return "";
+      return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+    }
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
+    }
+    // ==============================================================
+    // 6. MOUSE MOTION RIPPLES & TINY WAVES
+    // ==============================================================
+    (function initWaveMotion() {
+      const canvas = document.getElementById("waveCanvas");
+      if(!canvas) return;
+      const ctx = canvas.getContext("2d");
+      let width = canvas.width = window.innerWidth;
+      let height = canvas.height = window.innerHeight;
+
+      window.addEventListener("resize", () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
+
+      const ripples = [];
+      let lastX = 0, lastY = 0, lastTime = 0;
+
+      window.addEventListener("mousemove", (e) => {
+        const now = performance.now();
+        const dist = Math.hypot(e.clientX - lastX, e.clientY - lastY);
+        // Spawn subtle wave ripples when moving mouse
+        if(dist > 12 && now - lastTime > 30) {
+          ripples.push({
+            x: e.clientX,
+            y: e.clientY,
+            radius: 2,
+            maxRadius: 45 + Math.min(35, dist * 0.8),
+            alpha: 0.35,
+            speed: 1.2 + Math.min(1.5, dist * 0.04)
+          });
+          lastX = e.clientX;
+          lastY = e.clientY;
+          lastTime = now;
+        }
+      });
+
+      function animateWaves() {
+        ctx.clearRect(0, 0, width, height);
+
+        for(let i = ripples.length - 1; i >= 0; i--) {
+          const r = ripples[i];
+          r.radius += r.speed;
+          r.alpha *= 0.945; // smooth fade out
+
+          if(r.alpha < 0.01 || r.radius >= r.maxRadius) {
+            ripples.splice(i, 1);
+            continue;
+          }
+
+          ctx.beginPath();
+          ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+          // Delicate cyan-white glowing wave ring
+          ctx.strokeStyle = `rgba(56, 189, 248, ${r.alpha.toFixed(3)})`;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          // Subtle inner echo wave
+          if(r.radius > 10) {
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, r.radius * 0.65, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 255, 255, ${(r.alpha * 0.4).toFixed(3)})`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+
+        requestAnimationFrame(animateWaves);
+      }
+      animateWaves();
+    })();
+  </script>
+</body>
+</html>
